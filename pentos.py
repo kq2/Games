@@ -195,14 +195,14 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         kq2grid.Grid.reset(self)
 
-        self.mino = self.new_mino()
-        self.stable_minos = set()
-        self.moving_minos = set()
-
-        self.top_row = self.get_rows()
-        self.full_rows = set()
         self.score = 0
         self.get_gui().update_score(self.score)
+        self.top_row = self.get_rows()
+        self.full_rows = set()
+
+        self.new_mino()
+        self.stable_minos = set()
+        self.moving_minos = set()
 
     def set_routine(self, sequence_string):
         """
@@ -216,19 +216,22 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         if self.mino_map is PENTOMINO:
             self.mino_map = TETROMINO
-            return 'Tetromino'
+            return 'Pentos'
 
         self.mino_map = PENTOMINO
-        return 'Pentomino'
+        return 'Tetris'
 
     def new_mino(self):
         """
-        Return a new polyomino.
+        Set control polyomino to a new polyomino.
         """
+        if self.is_over():
+            return
+
         mino_key = ''
         if self.routine:
             mino_key = self.routine.pop(0)
-        return new_polyomino(self.mino_map, mino_key)
+        self.mino = new_polyomino(self.mino_map, mino_key)
 
     def empty_row(self, row):
         """
@@ -402,8 +405,8 @@ class Game(kq2grid.Grid, kq2gui.Game):
         elif self.mino:
             if not self.move_mino(self.mino, offset):
                 self.add_stable_mino(self.mino)
-                self.mino = self.new_mino()
                 self.remove_full_rows()
+                self.new_mino()
 
     def x_move(self, offset):
         """
@@ -455,9 +458,10 @@ class GUI(kq2gui.GUI):
 
     def new_game(self):
         """
-        Start a new game.
+        Override to reset all game elements.
         """
         kq2gui.GUI.new_game(self)
+
         self.fast_fall.stop()
         self.left_timer.stop()
         self.right_timer.stop()
@@ -544,7 +548,7 @@ class GUI(kq2gui.GUI):
 
     def draw(self, canvas):
         """
-        Draw game on canvas.
+        Override to draw both game deadline.
         """
         kq2gui.GUI.draw(self, canvas)
         canvas.draw_line(*self.deadline)
