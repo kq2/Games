@@ -435,11 +435,9 @@ class GUI(kq2gui.GUI):
                             'White')
 
         # set up GUI elements
-        self.deadline = [
-            (0, TILE_SIZE[1] * START_ROWS),
-            (TILE_SIZE[0] * game.get_cols(), TILE_SIZE[0] * START_ROWS),
-            1, ''
-        ]
+        x_pos = TILE_SIZE[0] * game.get_cols()
+        y_pos = TILE_SIZE[1] * START_ROWS
+        self.deadline = [(0, y_pos), (x_pos, y_pos), 1, '']
         self.button_switch = self.add_button('Pentomino', self.switch)
         self.button_pause = self.add_button('Pause', self.pause)
         self.label_score = self.add_label('')

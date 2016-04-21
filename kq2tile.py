@@ -380,7 +380,7 @@ class Rect:
 
     def update(self):
         """
-        Filled by child.
+        Update by self's animation.
         """
         if self.animation:
             self.animation.update(self)

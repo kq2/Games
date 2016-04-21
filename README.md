@@ -2,7 +2,7 @@
 
 Play them in CodeSkulptor (Chrome is preferred)
 
-1. [Pentos](http://www.codeskulptor.org/#user41_OdlrSzivTm_0.py)
+1. [Pentos](http://www.codeskulptor.org/#user41_ieTMduxCkS_22.py)
 (based on [Pentomino](https://en.wikipedia.org/wiki/Pentomino)
 and [Tetris](https://en.wikipedia.org/wiki/Tetris))
 
