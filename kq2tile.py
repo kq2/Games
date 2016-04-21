@@ -82,38 +82,6 @@ def text_pos(text_center, text_size):
             text_center[1] + text_size[1] / 2)
 
 
-def oval_pos(width, height, center, angle):
-    """
-    Return a point position on an oval.
-    """
-    return (center[0] + math.cos(angle) * width / 2,
-            center[1] + math.sin(angle) * height / 2)
-
-
-def x_flip_rect(width, height, center, angle, visual_diff=4):
-    """
-    Return a horizontally flipping rectangle.
-    """
-    upper_center = (center[0], center[1] - height / 2.0)
-    lower_center = (center[0], center[1] + height / 2.0)
-    return [oval_pos(width, visual_diff, upper_center, angle + math.pi),
-            oval_pos(width, visual_diff, upper_center, angle),
-            oval_pos(width, visual_diff, lower_center, -angle),
-            oval_pos(width, visual_diff, lower_center, -angle + math.pi)]
-
-
-def y_flip_rect(width, height, center, angle, visual_diff=4):
-    """
-    Return a vertically flipping rectangle.
-    """
-    left_center = (center[0] - width / 2.0, center[1])
-    right_center = (center[0] + width / 2.0, center[1])
-    return [oval_pos(visual_diff, height, left_center, angle + math.pi / 2),
-            oval_pos(visual_diff, height, left_center, angle - math.pi / 2),
-            oval_pos(visual_diff, height, right_center, -angle - math.pi / 2),
-            oval_pos(visual_diff, height, right_center, -angle + math.pi / 2)]
-
-
 def cell_corner(row, col, cell_size):
     """
     Return the upper left corner of a tile.
