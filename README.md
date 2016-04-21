@@ -1,6 +1,6 @@
 # Kevin's Python Games
 
-Play them in [CodeSkulptor](http://www.codeskulptor.org) (Chrome is preferred)
+Play them in CodeSkulptor (Chrome is preferred)
 
 0. [Pentos] (http://www.codeskulptor.org/#user41_OdlrSzivTm_0.py) (based on [Pentomino](https://en.wikipedia.org/wiki/Pentomino) and [Tetris](https://en.wikipedia.org/wiki/Tetris))
 
