@@ -114,22 +114,6 @@ def y_flip_rect(width, height, center, angle, visual_diff=4):
             oval_pos(visual_diff, height, right_center, -angle + math.pi / 2)]
 
 
-def slices(start, end, ratios):
-    """
-    Return a list of slices based on given ratios.
-    """
-    diff = end - start
-    return [start + diff * ratio for ratio in ratios]
-
-
-def tup_slices(start_tup, end_tup, ratios):
-    """
-    Return a list of sliced tuples based on given ratios.
-    """
-    return zip(slices(start_tup[0], end_tup[0], ratios),
-               slices(start_tup[1], end_tup[1], ratios))
-
-
 def cell_corner(row, col, cell_size):
     """
     Return the upper left corner of a tile.
@@ -296,6 +280,7 @@ class Rect:
         self.border_color = 'Black'
         self.rect = corner_rect(pos, size)
         self.center = corner2center(pos, size)
+        self.animation = None
 
     def get_pos(self):
         """
@@ -360,6 +345,18 @@ class Rect:
         """
         self.rect = rect
 
+    def get_animation(self):
+        """
+        Return update strategy.
+        """
+        return self.animation
+
+    def set_animation(self, animation):
+        """
+        Change update strategy.
+        """
+        self.animation = animation
+
     def get_center(self):
         """
         Return center.
@@ -385,7 +382,8 @@ class Rect:
         """
         Filled by child.
         """
-        pass
+        if self.animation:
+            self.animation.update(self)
 
     def draw(self, canvas):
         """
@@ -447,139 +445,6 @@ class TextRect(Rect):
         """
         Rect.draw(self, canvas)
         self.draw_text(canvas, gui)
-
-
-class MovingRect(Rect):
-    """
-    Rectangle with moving animation.
-    """
-    def __init__(self, pos, size, color):
-        """
-        Initialize a rectangle with moving animation.
-        """
-        Rect.__init__(self, pos, size, color)
-        self.pos_list = []
-        self.vel_list = []
-
-    def set_pos(self, pos, animation_template=None):
-        """
-        Override to add animation.
-        """
-        if animation_template:
-            self.pos_list += tup_slices(self.get_pos(), pos,
-                                        animation_template)
-        else:
-            Rect.set_pos(self, pos)
-
-    def move(self, vel, animation_template=None):
-        """
-        Override to add animation.
-        """
-        if animation_template:
-            self.vel_list += tup_slices((0, 0), vel,
-                                        animation_template)
-        else:
-            Rect.move(self, vel)
-
-    def is_moving(self):
-        """
-        Return true if self is moving.
-        """
-        if self.pos_list or self.vel_list:
-            return True
-        return False
-
-    def update(self):
-        """
-        Override to update position.
-        """
-        if self.pos_list:
-            pos = self.pos_list.pop(0)
-            self.set_pos(pos)
-        if self.vel_list:
-            vel = self.vel_list.pop(0)
-            self.move(vel)
-
-
-class FlippingRect(Rect):
-    """
-    Rectangle with flipping animation.
-    """
-    def __init__(self, pos, size, front_color, back_color):
-        """
-        Initialize a rectangle with flipping animation.
-        """
-        Rect.__init__(self, pos, size, front_color)
-        self.front_color = front_color
-        self.back_color = back_color
-        self.angle = 0
-        self.angle_list = []
-        self.angle_vel_list = []
-
-    def get_angle(self):
-        """
-        Return angle.
-        """
-        return self.angle
-
-    def set_angle(self, angle, animation_template=None):
-        """
-        Change angle.
-        """
-        if animation_template:
-            self.angle_list += slices(self.angle, angle,
-                                      animation_template)
-        else:
-            self.angle = angle
-
-    def flip(self, angle_vel, animation_template=None):
-        """
-        Change angle velocity.
-        """
-        if animation_template:
-            self.angle_vel_list += slices(0, angle_vel,
-                                          animation_template)
-        else:
-            self.angle += angle_vel
-
-    def is_flipping(self):
-        """
-        Return true if self is flipping.
-        """
-        if self.angle_list or self.angle_vel_list:
-            return True
-        return False
-
-    def is_front(self):
-        """
-        Return true if front side is facing up.
-        """
-        return 0 <= (self.angle + math.pi / 2) % (2 * math.pi) < math.pi
-
-    def update(self, flip_rect_fn=None):
-        """
-        Override to update angle, color and rectangle.
-        """
-        # update angle
-        if self.angle_list:
-            angle = self.angle_list.pop(0)
-            self.set_angle(angle)
-        if self.angle_vel_list:
-            angle_vel = self.angle_vel_list.pop(0)
-            self.flip(angle_vel)
-
-        # update color
-        if self.is_front():
-            self.set_color(self.front_color)
-        else:
-            self.set_color(self.back_color)
-
-        # update rectangle
-        if flip_rect_fn:
-            rect = flip_rect_fn(self.angle,
-                                self.get_size(),
-                                self.get_center())
-            self.set_rect(rect)
 
 
 class Tile(Rect):
