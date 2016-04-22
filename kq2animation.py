@@ -54,81 +54,89 @@ def y_flip_rect(size, center, angle, visual_diff=4):
             oval_pos(size, right_center, -angle + math.pi / 2)]
 
 
-class Moving:
+class Animation:
     """
-    Moving animation.
+    Animation class.
     """
     def __init__(self):
         """
-        Initialize a moving animation.
+        Initialize a animation.
         """
-        self.pos_list = []
+        self.moves = []
 
-    def set_pos(self, start_pos, end_pos, animation_template=None):
+    def move_to(self, start, end, animation_template=None):
         """
-        Set animation to move to given destination.
+        Set animation move to given end.
         """
         if animation_template:
-            self.pos_list += tup_slices(start_pos, end_pos,
-                                        animation_template)
+            self.moves += tup_slices(start, end, animation_template)
         else:
-            self.pos_list = [end_pos]
+            self.moves = [end]
 
-    def move(self, start_pos, vel, animation_template=None):
+    def move_by(self, start, offset, animation_template=None):
         """
-        Set animation to move given velocity.
+        Set animation move by given offset.
         """
-        end_pos = (start_pos[0] + vel[0],
-                   start_pos[1] + vel[1])
-        self.set_pos(start_pos, end_pos, animation_template)
+        end = (start[0] + offset[0],
+               start[1] + offset[1])
+        self.move_to(start, end, animation_template)
 
     def is_moving(self):
         """
         Return true if moving.
         """
-        if self.pos_list:
+        if self.moves:
             return True
         return False
 
     def update(self, item):
         """
-        Update the position of given item.
+        Remove and return the current update.
         """
-        if self.pos_list:
-            pos = self.pos_list.pop(0)
-            item.set_pos(pos)
+        if self.moves:
+            return self.moves.pop(0)
 
 
-class Flipping:
+class Moving(Animation):
+    """
+    Moving animation.
+    """
+    def update(self, item):
+        """
+        Override to update the position of given item.
+        """
+        if self.is_moving():
+            center = Animation.update(self, item)
+            item.set_center(center)
+
+
+class Resizing(Animation):
+    """
+    Resizing animation.
+    """
+    def update(self, item):
+        """
+        Override to update the size of given item.
+        """
+        if self.is_moving():
+            size = Animation.update(self, item)
+            item.set_size(size)
+
+
+class Flipping(Animation):
     """
     Flipping animation.
     """
-    def __init__(self, angle, front_color, back_color, flip_rect_fn):
+    def __init__(self, angle, front_color, back_color):
         """
         Initialize a flipping animation.
         """
+        Animation.__init__(self)
+
         self.angle = angle
         self.front_color = front_color
         self.back_color = back_color
-        self.flip_rect_fn = flip_rect_fn
-
-        self.angle_list = []
-
-    def get_angle(self):
-        """
-        Return angle.
-        """
-        return self.angle
-
-    def set_angle(self, angle, animation_template=None):
-        """
-        Change angle to given angle.
-        """
-        if animation_template:
-            self.angle_list += slices(self.angle, angle,
-                                      animation_template)
-        else:
-            self.angle = angle
+        self.flip_rect_fn = x_flip_rect
 
     def set_front_color(self, color):
         """
@@ -142,19 +150,26 @@ class Flipping:
         """
         self.back_color = color
 
-    def flip(self, angle_vel, animation_template=None):
+    def flip_to(self, angle, animation_template=None, flip_rect_fn=None):
         """
-        Change angle by given angle velocity.
+        Flip angle to given angle.
         """
-        self.set_angle(self.angle + angle_vel, animation_template)
+        if flip_rect_fn:
+            self.flip_rect_fn = flip_rect_fn
 
-    def is_flipping(self):
+        if animation_template:
+            start = (self.angle, 0)
+            end = (angle, 0)
+            self.move_to(start, end, animation_template)
+        else:
+            self.angle = angle
+
+    def flip_by(self, angle, animation_template=None, flip_rect_fn=None):
         """
-        Return true if flipping.
+        Flip angle by given angle.
         """
-        if self.angle_list:
-            return True
-        return False
+        angle = self.angle + angle
+        self.flip_to(angle, animation_template, flip_rect_fn)
 
     def is_front(self):
         """
@@ -162,32 +177,71 @@ class Flipping:
         """
         return 0 <= (self.angle + math.pi / 2) % (2 * math.pi) < math.pi
 
-    def update_color(self, tile):
+    def update_color(self, item):
         """
-        Update tile's color.
+        Update item's color.
         """
         if self.is_front():
-            tile.set_color(self.front_color)
-            tile.set_border_color(self.front_color)
+            item.set_color(self.front_color)
+            item.set_border_color(self.front_color)
         else:
-            tile.set_color(self.back_color)
-            tile.set_border_color(self.back_color)
+            item.set_color(self.back_color)
+            item.set_border_color(self.back_color)
 
     def update_rect(self, item):
         """
-        Update tile's rectangle.
+        Update item's rectangle.
         """
-        flip_rect = self.flip_rect_fn(
-            item.get_size(), item.get_center(), self.angle
-        )
-        item.set_rect(flip_rect)
+        rect = self.flip_rect_fn(item.get_size(),
+                                 item.get_center(),
+                                 self.angle)
+        item.set_rect(rect)
 
     def update(self, item):
         """
-        Update color and rectangle of given item.
+        Override to update color and rectangle of given item.
         """
-        if self.angle_list:
-            angle = self.angle_list.pop(0)
-            self.set_angle(angle)
+        if self.is_moving():
+            self.angle = Animation.update(self, item)[0]
             self.update_color(item)
             self.update_rect(item)
+
+
+class MixAnimation(Animation):
+    """
+    Composite animation.
+    """
+    def __init__(self):
+        """
+        Initialize a composite animation.
+        """
+        Animation.__init__(self)
+        self.animations = {}
+
+    def add_animation(self, ani):
+        """
+        Add an animation.
+        """
+        self.animations[type(ani)] = ani
+
+    def get_animation(self, ani_type):
+        """
+        Return an animation by given type.
+        """
+        return self.animations[ani_type]
+
+    def is_moving(self):
+        """
+        Override to return true if any is moving.
+        """
+        for ani in self.animations.values():
+            if ani.is_moving():
+                return True
+        return False
+
+    def update(self, item):
+        """
+        Override to update all animations.
+        """
+        for ani in self.animations.values():
+            ani.update(item)

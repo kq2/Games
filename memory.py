@@ -35,7 +35,7 @@ def valid_click(pos, tile):
     Return true if click is valid to Memory game.
     """
     animation = tile.get_animation()
-    return (not animation.is_flipping()
+    return (not animation.is_moving()
             and animation.is_front()
             and tile.has_pos(pos))
 
@@ -58,10 +58,8 @@ class Game(kq2grid.Grid, kq2gui.Game):
             front_color = 'White'
             tile = kq2tile.Tile(row, col, CELL_SIZE, TILE_SIZE, front_color)
             tile.set_border_color(front_color)
-            tile.set_animation(
-                kq2animation.Flipping(0, front_color, front_color,
-                                      kq2animation.x_flip_rect)
-            )
+            animation = kq2animation.Flipping(0, front_color, front_color)
+            tile.set_animation(animation)
             self.set_tile(row, col, tile)
 
     def reset(self):
@@ -76,9 +74,9 @@ class Game(kq2grid.Grid, kq2gui.Game):
         for row, col in self:
             tile = self.get_tile(row, col)
             animation = tile.get_animation()
-            animation.set_angle(math.pi)
+            animation.flip_to(math.pi)
             animation.set_back_color(colors.pop())
-            animation.set_angle(0, ANGLE_ANIMATION)
+            animation.flip_to(0, ANGLE_ANIMATION)
 
     def click(self, pos):
         """
@@ -103,12 +101,12 @@ class Game(kq2grid.Grid, kq2gui.Game):
             tile1 = self.exposed_tiles.pop()
             tile2 = self.exposed_tiles.pop()
             if tile1.get_color() != tile2.get_color():
-                tile1.get_animation().set_angle(0, ANGLE_ANIMATION)
-                tile2.get_animation().set_angle(0, ANGLE_ANIMATION)
+                tile1.get_animation().flip_to(0, ANGLE_ANIMATION)
+                tile2.get_animation().flip_to(0, ANGLE_ANIMATION)
 
         # if 1 or 0 tile exposed, flip it to expose
         if len(self.exposed_tiles) < 2:
-            tile.get_animation().flip(angle, ANGLE_ANIMATION)
+            tile.get_animation().flip_by(angle, ANGLE_ANIMATION)
             self.exposed_tiles.add(tile)
 
         self.score += 1
@@ -127,6 +125,10 @@ class GUI(kq2gui.GUI):
     Memory game GUI.
     """
     def __init__(self, gui, game):
+        """
+        Initialize a game GUI, encapsulating the game and a real GUI,
+        so that the real GUI can be easily replaced.
+        """
         kq2gui.GUI.__init__(self, gui, game, 'Memory',
                             CELL_SIZE[0] * game.get_cols(),
                             CELL_SIZE[1] * game.get_rows(),

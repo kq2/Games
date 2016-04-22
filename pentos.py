@@ -428,10 +428,13 @@ class Game(kq2grid.Grid, kq2gui.Game):
 
 class GUI(kq2gui.GUI):
     """
-    Polyominoes game GUI, encapsulating the game and a real GUI,
-    so that the real GUI can be easily replaced.
+    Polyominoes game GUI.
     """
     def __init__(self, gui, game):
+        """
+        Initialize a game GUI, encapsulating the game and a real GUI,
+        so that the real GUI can be easily replaced.
+        """
         kq2gui.GUI.__init__(self, gui, game, 'Pentos',
                             TILE_SIZE[0] * game.get_cols(),
                             TILE_SIZE[1] * game.get_rows(),

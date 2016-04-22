@@ -98,6 +98,14 @@ def cell_center(row, col, cell_size):
     return corner2center(corner, cell_size)
 
 
+def two_cell_dist(cell1, cell2, cell_size):
+    """
+    Return the distance between two cells.
+    """
+    row, col = sub(cell1, cell2)
+    return cell_corner(row, col, cell_size)
+
+
 def cell_4_neighbor(cell):
     """
     Return a cell's four neighbors.
@@ -246,33 +254,31 @@ class Rect:
     """
     Rectangle with color.
     """
-    def __init__(self, pos, size, color):
+    def __init__(self, center, size, color):
         """
         Initialize a rectangle with color.
         """
-        self.pos = pos  # upper left corner
+        self.center = center
         self.size = size
         self.color = color
 
         self.border_width = 2
         self.border_color = 'Black'
-        self.rect = corner_rect(pos, size)
-        self.center = corner2center(pos, size)
+        self.rect = center_rect(center, size)
         self.animation = None
 
-    def get_pos(self):
+    def get_center(self):
         """
-        Return the upper left corner (position).
+        Return the center position.
         """
-        return tuple(self.pos)
+        return tuple(self.center)
 
-    def set_pos(self, pos):
+    def set_center(self, center):
         """
-        Change the upper left corner (position).
+        Change the center position.
         """
-        self.pos = pos
-        self.rect = corner_rect(pos, self.size)
-        self.center = corner2center(pos, self.size)
+        self.center = center
+        self.rect = center_rect(center, self.size)
 
     def get_size(self):
         """
@@ -285,7 +291,7 @@ class Rect:
         Change size.
         """
         self.size = size
-        self.rect = corner_rect(self.pos, size)
+        self.set_center(self.center)
 
     def get_color(self):
         """
@@ -335,26 +341,19 @@ class Rect:
         """
         self.animation = animation
 
-    def get_center(self):
-        """
-        Return center.
-        """
-        return tuple(self.center)
-
     def has_pos(self, pos):
         """
         Return true if given position is inside rectangle.
         """
-        diff = sub(pos, self.pos)
-        return (0 <= diff[0] < self.size[0]
-                and 0 <= diff[1] < self.size[1])
+        diff = sub(pos, self.center)
+        return (abs(diff[0]) <= self.size[0] / 2
+                and abs(diff[1]) <= self.size[1] / 2)
 
     def move(self, vel):
         """
         Change position by velocity.
         """
-        pos = add(self.pos, vel)
-        self.set_pos(pos)
+        self.set_center(add(self.center, vel))
 
     def update(self):
         """
@@ -378,12 +377,12 @@ class TextRect(Rect):
     """
     Rectangle with text in center.
     """
-    def __init__(self, pos, size, color,
+    def __init__(self, center, size, color,
                  text, font_size, font_face, font_color):
         """
         Initialize a rectangle with text.
         """
-        Rect.__init__(self, pos, size, color)
+        Rect.__init__(self, center, size, color)
         self.text = text
         self.font_size = font_size
         self.font_face = font_face
@@ -437,8 +436,7 @@ class Tile(Rect):
         self.col = col
 
         center = cell_center(row, col, cell_size)
-        corner = center2corner(center, tile_size)
-        Rect.__init__(self, corner, tile_size, color)
+        Rect.__init__(self, center, tile_size, color)
 
     def get_row(self):
         """
@@ -463,8 +461,7 @@ class Tile(Rect):
         Change cell in grid and try update position.
         """
         if cell_size:
-            vel = ((col - self.col) * cell_size[0],
-                   (row - self.row) * cell_size[1])
-            self.move(vel)
+            center = cell_center(row, col, cell_size)
+            self.set_center(center)
         self.row = row
         self.col = col
