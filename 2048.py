@@ -37,7 +37,7 @@ RIGHT = 4
 
 class Tile(kq2tile.Tile, kq2tile.TextRect):
     """
-    2048 tile.
+    2048 game tile.
     """
     def __init__(self, row, col, val):
         """
@@ -108,7 +108,6 @@ class Game(kq2grid.Grid, kq2gui.Game):
         Initialize a 2048 game board.
         """
         kq2grid.Grid.__init__(self, rows, cols)
-        kq2gui.Game.__init__(self)
 
         self.iter_order = {
             UP: [[(row, col) for row in range(rows)]

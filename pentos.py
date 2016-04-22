@@ -157,7 +157,6 @@ class Game(kq2grid.Grid, kq2gui.Game):
         Initialize a polyominoes game.
         """
         kq2grid.Grid.__init__(self, rows + START_ROWS, cols)
-        kq2gui.Game.__init__(self)
 
         self.mino = None
         self.stable_minos = set()

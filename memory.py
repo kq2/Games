@@ -49,7 +49,6 @@ class Game(kq2grid.Grid, kq2gui.Game):
         Initialize a game with tiles.
         """
         kq2grid.Grid.__init__(self, rows, cols)
-        kq2gui.Game.__init__(self)
 
         self.score = 0
         self.exposed_tiles = set()
@@ -133,6 +132,7 @@ class GUI(kq2gui.GUI):
                             CELL_SIZE[0] * game.get_cols(),
                             CELL_SIZE[1] * game.get_rows(),
                             'Black')
+
         self.set_mouse_click_handler(self.click)
         self.label = self.add_label('0')
         self.start_frame()

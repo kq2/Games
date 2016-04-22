@@ -118,8 +118,8 @@ def pos2cell(pos, cell_size, cell_offset=(0, 0)):
     """
     Return a cell from given position.
     """
-    pos = (pos[0] + cell_offset[0] * cell_size[0],
-           pos[1] + cell_offset[1] * cell_size[1])
+    pos = (pos[0] + cell_offset[1] * cell_size[0],
+           pos[1] + cell_offset[0] * cell_size[1])
     return (pos[1] // cell_size[1],
             pos[0] // cell_size[0])
 
