@@ -106,6 +106,16 @@ def cell_4_neighbor(cell):
             (UP, DOWN, LEFT, RIGHT)]
 
 
+def pos2cell(pos, cell_size, cell_offset=(0, 0)):
+    """
+    Return a cell from given position.
+    """
+    pos = (pos[0] + cell_offset[0] * cell_size[0],
+           pos[1] + cell_offset[1] * cell_size[1])
+    return (pos[1] // cell_size[1],
+            pos[0] // cell_size[0])
+
+
 def rotate(point, center, angle):
     """
     Return a rotated point.
@@ -209,7 +219,7 @@ def connected_cells(cells):
     # BFS
     while copy:
         start = copy.pop()
-        connected = {start}
+        connected = set([start])
         stack = [start]
         while stack:
             cell = stack.pop(0)

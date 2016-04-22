@@ -28,7 +28,7 @@ class Game:
 
 class GUI:
     """
-    A basic game GUI.
+    This GUI encapsulates SimpleGUI and a game.
     """
     def __init__(self, gui, game, game_name, width, height, canvas_color):
         """
@@ -101,6 +101,18 @@ class GUI:
         Set key up handler.
         """
         self.frame.set_keyup_handler(key_handler)
+
+    def set_mouse_click_handler(self, mouse_handler):
+        """
+        Set mouse click handler.
+        """
+        self.frame.set_mouseclick_handler(mouse_handler)
+
+    def set_mouse_drag_handler(self, mouse_handler):
+        """
+        Set mouse drag handler.
+        """
+        self.frame.set_mousedrag_handler(mouse_handler)
 
     def start_frame(self):
         """
