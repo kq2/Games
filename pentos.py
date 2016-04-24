@@ -196,7 +196,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
         kq2grid.Grid.reset(self)
 
         self.score = 0
-        self.update_score(self.score)
+        self.get_gui().update_score(self.score)
         self.top_row = self.get_rows()
         self.full_rows = set()
 
@@ -355,7 +355,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
             self.empty_rows(moving_rows)
             self.top_row = bottom_row + 1
             self.score += len(self.full_rows)
-            self.update_score(self.score)
+            self.get_gui().update_score(self.score)
             self.full_rows = set()
 
     def break_minos(self, rows):

@@ -25,12 +25,6 @@ class Game:
         """
         return self.gui
 
-    def update_score(self, score):
-        """
-        Update score on GUI.
-        """
-        self.gui.update_score(score)
-
 
 class GUI:
     """

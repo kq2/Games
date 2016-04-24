@@ -132,7 +132,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
             self.exposed_tiles.append(tile)
 
         self.score += 1
-        self.update_score(self.score)
+        self.get_gui().update_score(self.score)
 
     def draw(self, canvas):
         """

@@ -116,7 +116,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
 
         self.moved = False
         self.num_tile = 0
-        self.update_score(self.num_tile)
+        self.get_gui().update_score(self.num_tile)
         self.animation.reset()
 
         for _ in range(2):
@@ -133,7 +133,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
             tile = Tile(row, col, val)
             self.set_tile(row, col, tile)
             self.num_tile += 1
-            self.update_score(self.num_tile)
+            self.get_gui().update_score(self.num_tile)
             self.animation.new_tile(tile)
             print self
 
