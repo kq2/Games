@@ -40,6 +40,32 @@ def valid_click(pos, tile):
             and tile.has_pos(pos))
 
 
+def new_tile(tile, tile_color):
+    """
+    Add animation to new tile.
+    """
+    animation = kq2animation.Flipping(0, tile_color, tile_color)
+    tile.set_animation(animation)
+
+
+def reset_tile(tile):
+    """
+    Add animation to show tile's color then hide.
+    """
+    animation = tile.get_animation()
+    animation.set_back_color(tile.get_color())
+    animation.move(math.pi)
+    animation.move(0, ANGLE_ANIMATION)
+
+
+def flip_tile(tile, angle, is_vel=False):
+    """
+    Add animation to flip tile.
+    """
+    animation = tile.get_animation()
+    animation.move(angle, ANGLE_ANIMATION, is_vel)
+
+
 class Game(kq2grid.Grid, kq2gui.Game):
     """
     Memory game.
@@ -51,31 +77,29 @@ class Game(kq2grid.Grid, kq2gui.Game):
         kq2grid.Grid.__init__(self, rows, cols)
 
         self.score = 0
-        self.exposed_tiles = set()
+        self.exposed_tiles = []
 
+        tile_color = 'White'
         for row, col in self:
-            front_color = 'White'
-            tile = kq2tile.Tile(row, col, CELL_SIZE, TILE_SIZE, front_color)
-            tile.set_border_color(front_color)
-            animation = kq2animation.Flipping(0, front_color, front_color)
-            tile.set_animation(animation)
+            tile = kq2tile.Tile(row, col, CELL_SIZE,
+                                TILE_SIZE, tile_color)
+            tile.set_border_color(tile_color)
             self.set_tile(row, col, tile)
+            new_tile(tile, tile_color)
 
     def reset(self):
         """
         Override to reset each tile's color and animation.
         """
         self.score = 0
-        self.exposed_tiles = set()
+        self.exposed_tiles = []
         self.get_gui().update_score(self.score)
 
         colors = random_colors(len(self))
         for row, col in self:
             tile = self.get_tile(row, col)
-            animation = tile.get_animation()
-            animation.flip_to(math.pi)
-            animation.set_back_color(colors.pop())
-            animation.flip_to(0, ANGLE_ANIMATION)
+            tile.set_color(colors.pop())
+            reset_tile(tile)
 
     def click(self, pos):
         """
@@ -93,23 +117,22 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         Flip a tile. Main game logic.
         """
-
-        # if 2 tiles are exposed, flip them back if
+        # if 2 tiles are already exposed, flip them back if
         # they have different colors.
         if len(self.exposed_tiles) == 2:
             tile1 = self.exposed_tiles.pop()
             tile2 = self.exposed_tiles.pop()
             if tile1.get_color() != tile2.get_color():
-                tile1.get_animation().flip_to(0, ANGLE_ANIMATION)
-                tile2.get_animation().flip_to(0, ANGLE_ANIMATION)
+                flip_tile(tile1, 0)
+                flip_tile(tile2, 0)
 
         # if 1 or 0 tile exposed, flip it to expose
         if len(self.exposed_tiles) < 2:
-            tile.get_animation().flip_by(angle, ANGLE_ANIMATION)
-            self.exposed_tiles.add(tile)
+            flip_tile(tile, angle, is_vel=True)
+            self.exposed_tiles.append(tile)
 
         self.score += 1
-        self.get_gui().update_score(self.score)
+        self.update_score(self.score)
 
     def draw(self, canvas):
         """

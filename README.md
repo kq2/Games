@@ -2,14 +2,14 @@
 
 Play them in CodeSkulptor (Chrome is preferred)
 
-1. [Pentos](http://www.codeskulptor.org/#user41_ieTMduxCkS_25.py)
+1. [Pentos](http://www.codeskulptor.org/#user41_ieTMduxCkS_26.py)
 (based on [Pentomino](https://en.wikipedia.org/wiki/Pentomino)
 and [Tetris](https://en.wikipedia.org/wiki/Tetris))
 
-1. [Letterpress](http://www.codeskulptor.org/#user41_ZTrflWxgeU_13.py)
+1. [Letterpress](http://www.codeskulptor.org/#user41_ZTrflWxgeU_14.py)
 ([Letterpress](http://www.atebits.com/letterpress/) clone)
 
-1. [2048](http://www.codeskulptor.org/#user41_seqx5glx8Z_12.py)
+1. [2048](http://www.codeskulptor.org/#user41_seqx5glx8Z_15.py)
 ([2048](https://en.wikipedia.org/wiki/2048_(video_game)) clone)
 
-1. [Memory](http://www.codeskulptor.org/#user41_QoSL28qdno_7.py)
+1. [Memory](http://www.codeskulptor.org/#user41_QoSL28qdno_9.py)

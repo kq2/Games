@@ -157,6 +157,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
         Initialize a polyominoes game.
         """
         kq2grid.Grid.__init__(self, rows + START_ROWS, cols)
+        kq2gui.Game.__init__(self)
 
         self.mino = None
         self.stable_minos = set()
@@ -195,7 +196,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
         kq2grid.Grid.reset(self)
 
         self.score = 0
-        self.get_gui().update_score(self.score)
+        self.update_score(self.score)
         self.top_row = self.get_rows()
         self.full_rows = set()
 
@@ -259,7 +260,10 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         Return true if given row is full.
         """
-        return all(self.get_row(row))
+        for row, col in self.get_row(row):
+            if self.is_empty(row, col):
+                return False
+        return True
 
     def is_over(self):
         """
@@ -271,7 +275,11 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         Return all polyominoes in given row.
         """
-        return set([mino for mino in self.get_row(row) if mino])
+        ans = set()
+        for row, col in self.get_row(row):
+            if not self.is_empty(row, col):
+                ans.add(self.get_tile(row, col))
+        return ans
 
     def minos_in_rows(self, rows):
         """
@@ -347,7 +355,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
             self.empty_rows(moving_rows)
             self.top_row = bottom_row + 1
             self.score += len(self.full_rows)
-            self.get_gui().update_score(self.score)
+            self.update_score(self.score)
             self.full_rows = set()
 
     def break_minos(self, rows):
@@ -427,13 +435,10 @@ class Game(kq2grid.Grid, kq2gui.Game):
 
 class GUI(kq2gui.GUI):
     """
-    Polyominoes game GUI.
+    Polyominoes game GUI, encapsulating the game and a real GUI,
+    so that the real GUI can be easily replaced.
     """
     def __init__(self, gui, game):
-        """
-        Initialize a game GUI, encapsulating the game and a real GUI,
-        so that the real GUI can be easily replaced.
-        """
         kq2gui.GUI.__init__(self, gui, game, 'Pentos',
                             TILE_SIZE[0] * game.get_cols(),
                             TILE_SIZE[1] * game.get_rows(),
@@ -443,7 +448,7 @@ class GUI(kq2gui.GUI):
         x_pos = TILE_SIZE[0] * game.get_cols()
         y_pos = TILE_SIZE[1] * START_ROWS
         self.deadline = [(0, y_pos), (x_pos, y_pos), 1, '']
-        self.button_switch = self.add_button('Pentomino', self.switch)
+        self.button_switch = self.add_button('Tetris', self.switch)
         self.button_pause = self.add_button('Pause', self.pause)
         self.label_score = self.add_label('')
         self.set_key_down_handler(self.key_down)
@@ -460,10 +465,9 @@ class GUI(kq2gui.GUI):
 
     def new_game(self):
         """
-        Override to reset all game elements.
+        Start a new game.
         """
         kq2gui.GUI.new_game(self)
-
         self.fast_fall.stop()
         self.left_timer.stop()
         self.right_timer.stop()
@@ -550,7 +554,7 @@ class GUI(kq2gui.GUI):
 
     def draw(self, canvas):
         """
-        Override to draw both game deadline.
+        Draw game on canvas.
         """
         kq2gui.GUI.draw(self, canvas)
         canvas.draw_line(*self.deadline)

@@ -12,12 +12,19 @@ def slices(start, end, ratios):
     return [start + diff * ratio for ratio in ratios]
 
 
-def tup_slices(start_tup, end_tup, ratios):
+def list_slices(start_list, end_list, ratios):
     """
-    Return a list of sliced tuples based on given ratios.
+    Return a list of sliced lists based on given ratios.
     """
-    return zip(slices(start_tup[0], end_tup[0], ratios),
-               slices(start_tup[1], end_tup[1], ratios))
+    return zip(*(slices(start, end, ratios)
+                 for start, end in zip(start_list, end_list)))
+
+
+def list_add(list1, list2):
+    """
+    Return a list of sums of elements.
+    """
+    return [sum(val) for val in zip(list1, list2)]
 
 
 def oval_pos(size, center, angle):
@@ -56,63 +63,80 @@ def y_flip_rect(size, center, angle, visual_diff=4):
 
 class Animation:
     """
-    Animation class.
+    One-dimension animation class.
     """
     def __init__(self):
         """
-        Initialize a animation.
+        Initialize an 1-dimension animation.
         """
-        self.states = []
-        self.final_state = (0, 0)
+        self.stop = 0
+        self.moves = []
 
-    def get_final_state(self):
+    def get_stop(self):
         """
-        Return final state.
+        Return stop.
         """
-        return self.final_state
+        return self.stop
 
-    def set_final_state(self, final_state):
+    def set_stop(self, stop):
         """
-        Set final state.
+        Set stop.
         """
-        self.final_state = final_state
+        self.stop = stop
 
-    def move_to(self, final_state, animation_template=None):
+    def move(self, stop, frames_template=None, is_vel=False):
         """
-        Add states to given final state.
+        Add moves to given stop.
         """
-        if not animation_template:
-            animation_template = [1]
-            
-        self.states += tup_slices(self.final_state, final_state, 
-                                  animation_template)
-        self.final_state = final_state
+        if is_vel:
+            stop += self.stop
+        if not frames_template:
+            frames_template = [1]
 
-    def move_by(self, diff, animation_template=None):
-        """
-        Add states by given difference.
-        """
-        final_state = (self.final_state[0] + diff[0],
-                       self.final_state[1] + diff[1])
-        self.move_to(final_state, animation_template)
+        self.moves += slices(self.stop, stop, frames_template)
+        self.stop = stop
 
     def is_moving(self):
         """
         Return true if moving.
         """
-        if self.states:
+        if self.moves:
             return True
         return False
 
     def update(self, item):
         """
-        Remove and return the current state.
+        Remove and return the current move.
         """
-        if self.states:
-            return self.states.pop(0)
+        if self.moves:
+            return self.moves.pop(0)
 
 
-class Moving(Animation):
+class NAnimation(Animation):
+    """
+    Multi-dimension animation class.
+    """
+    def __init__(self, num_dimension=2):
+        """
+        Initialize an n-dimension animation.
+        """
+        Animation.__init__(self)
+        self.set_stop([0] * num_dimension)
+
+    def move(self, stop, frames_template=None, is_vel=False):
+        """
+        Override to handle high dimension.
+        """
+        if is_vel:
+            stop = list_add(self.stop, stop)
+        if not frames_template:
+            frames_template = [1]
+
+        self.moves += list_slices(self.stop, stop, frames_template)
+        self.stop = stop
+
+
+class Moving(NAnimation):
     """
     Moving animation.
     """
@@ -121,11 +145,11 @@ class Moving(Animation):
         Override to update the position of given item.
         """
         if self.is_moving():
-            center = Animation.update(self, item)
-            item.set_center(center)
+            move = Animation.update(self, item)
+            item.set_center(move)
 
 
-class Resizing(Animation):
+class Resizing(NAnimation):
     """
     Resizing animation.
     """
@@ -134,8 +158,8 @@ class Resizing(Animation):
         Override to update the size of given item.
         """
         if self.is_moving():
-            size = Animation.update(self, item)
-            item.set_size(size)
+            move = Animation.update(self, item)
+            item.set_size(move)
 
 
 class Flipping(Animation):
@@ -147,7 +171,7 @@ class Flipping(Animation):
         Initialize a flipping animation.
         """
         Animation.__init__(self)
-        self.set_final_state(angle)
+        self.set_stop(angle)
 
         self.angle = angle
         self.front_color = front_color
@@ -171,18 +195,6 @@ class Flipping(Animation):
         Set flip computation function.
         """
         self.flip_fn = flip_fn
-
-    def move_to(self, angle, animation_template=None):
-        """
-        Override to change angle to tuple
-        """
-        Animation.move_to(self, (angle, 0), animation_template)
-
-    def move_by(self, angle, animation_template=None):
-        """
-        Override to change angle to tuple
-        """
-        Animation.move_by(self, (angle, 0), animation_template)
 
     def is_front(self):
         """
@@ -216,7 +228,7 @@ class Flipping(Animation):
         Override to update color and rectangle of given item.
         """
         if self.is_moving():
-            self.angle = Animation.update(self, item)[0]
+            self.angle = Animation.update(self, item)
             self.update_color(item)
             self.update_rect(item)
 
@@ -240,7 +252,7 @@ class MixAnimation(Animation):
 
     def get_animation(self, ani_type):
         """
-        Return an animation by given type.
+        Return an animation of given type.
         """
         return self.animations[ani_type]
 
@@ -250,45 +262,33 @@ class MixAnimation(Animation):
         """
         return self.animations.pop(ani_type)
 
-    def get_final_state(self, ani_type=None):
+    def get_stop(self, ani_type=None):
         """
-        Return final state.
+        Override to return stop of given type.
         """
         if ani_type:
-            ani = self.get_animation(ani_type)
-            return ani.get_final_state()
+            return self.get_animation(ani_type).get_stop()
 
-    def set_final_state(self, final_state, ani_type=None):
+    def set_stop(self, stop, ani_type=None):
         """
-        Set final state.
+        Override to set stop of given type.
         """
         if ani_type:
-            ani = self.get_animation(ani_type)
-            return ani.set_final_state(final_state)
+            return self.get_animation(ani_type).set_stop(stop)
 
-    def move_to(self, final_state, animation_template=None, ani_type=None):
+    def move(self, stop, frames_template=None, is_vel=False, ani_type=None):
         """
-        Override to change given type of animation.
-        """
-        if ani_type:
-            ani = self.get_animation(ani_type)
-            ani.move_to(final_state, animation_template)
-
-    def move_by(self, final_state, animation_template=None, ani_type=None):
-        """
-        Override to change given type of animation.
+        Override to update animation of given type.
         """
         if ani_type:
-            ani = self.get_animation(ani_type)
-            ani.move_by(final_state, animation_template)
+            self.get_animation(ani_type).move(stop, frames_template, is_vel)
 
     def is_moving(self, ani_type=None):
         """
         Override to return true if any is moving.
         """
         if ani_type:
-            ani = self.get_animation(ani_type)
-            return ani.is_moving()
+            return self.get_animation(ani_type).is_moving()
 
         for ani in self.animations.values():
             if ani.is_moving():
@@ -300,8 +300,7 @@ class MixAnimation(Animation):
         Override to update all animations.
         """
         if ani_type:
-            ani = self.get_animation(ani_type)
-            ani.update(item)
+            self.get_animation(ani_type).update(item)
         else:
             for ani in self.animations.values():
                 ani.update(item)
