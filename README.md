@@ -9,7 +9,7 @@ and [Tetris](https://en.wikipedia.org/wiki/Tetris))
 1. [Letterpress](http://www.codeskulptor.org/#user41_ZTrflWxgeU_13.py)
 ([Letterpress](http://www.atebits.com/letterpress/) clone)
 
-1. [2048](http://www.codeskulptor.org/#user41_seqx5glx8Z_10.py)
+1. [2048](http://www.codeskulptor.org/#user41_seqx5glx8Z_12.py)
 ([2048](https://en.wikipedia.org/wiki/2048_(video_game)) clone)
 
 1. [Memory](http://www.codeskulptor.org/#user41_QoSL28qdno_7.py)

@@ -33,6 +33,10 @@ UP = 1
 DOWN = 2
 LEFT = 3
 RIGHT = 4
+OFFSETS = {UP: (1, 0),
+           DOWN: (-1, 0),
+           LEFT: (0, 1),
+           RIGHT: (0, -1)}
 
 
 class Tile(kq2tile.Tile, kq2tile.TextRect):
@@ -41,7 +45,7 @@ class Tile(kq2tile.Tile, kq2tile.TextRect):
     """
     def __init__(self, row, col, val):
         """
-        Initialize a tile with value.
+        Initialize a tile with value and animation.
         """
         tile_color, font_size, font_color = TILES[val]
 
@@ -51,52 +55,24 @@ class Tile(kq2tile.Tile, kq2tile.TextRect):
                               TILE_SIZE, tile_color)
         self.val = val
 
-        ani = kq2animation.MixAnimation()
-        ani.add_animation(kq2animation.Resizing())
-        ani.add_animation(kq2animation.Moving())
-        self.set_animation(ani)
-
     def __add__(self, other):
         """
-        Add other tile, return a new tile with sum of both values.
+        Add another tile, return a new tile with sum of both values.
         """
         return Tile(self.get_row(), self.get_col(),
                     self.get_val() + other.get_val())
 
     def __eq__(self, other):
         """
-        Returns true if other tile has same value.
+        Return true if other tile has same value.
         """
         return self.get_val() == other.get_val()
 
     def get_val(self):
         """
-        Returns tile's value.
+        Return tile's value.
         """
         return self.val
-
-    def resize(self, size, animation_template):
-        """
-        Set resizing animation.
-        """
-        ani = self.get_animation().get_animation(kq2animation.Resizing)
-        ani.move_to((0, 0), size, animation_template)
-
-    def slide(self, cell, animation_template):
-        """
-        Set moving animation.
-        """
-        row, col = cell
-        center = kq2tile.cell_center(row, col, CELL_SIZE)
-        ani = self.get_animation().get_animation(kq2animation.Moving)
-        ani.move_to(self.get_center(), center, animation_template)
-
-    def is_moving(self):
-        """
-        Return true if tile is moving.
-        """
-        ani = self.get_animation().get_animation(kq2animation.Moving)
-        return ani.is_moving()
 
 
 class Game(kq2grid.Grid, kq2gui.Game):
@@ -109,22 +85,16 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         kq2grid.Grid.__init__(self, rows, cols)
 
-        self.iter_order = {
-            UP: [[(row, col) for row in range(rows)]
-                 for col in range(cols)],
-            DOWN: [[(row, col) for row in range(rows - 1, -1, -1)]
-                   for col in range(cols)],
-            LEFT: [[(row, col) for col in range(cols)]
-                   for row in range(rows)],
-            RIGHT: [[(row, col) for col in range(cols - 1, -1, -1)]
-                    for row in range(rows)]
+        self.init_cells = {
+            UP: self.get_row(0),
+            DOWN: self.get_row(rows - 1),
+            LEFT: self.get_col(0),
+            RIGHT: self.get_col(cols - 1)
         }
 
-        self.score = 0
-        self.moving_tiles = set()   # tiles that are moving
-        self.drawing_tiles = set()  # tiles that are drawing
-        self.holding_tiles = set()  # tiles that will be drawn after moving
-        self.merging_tiles = set()  # tiles that will be removed after moving
+        self.num_tile = 0
+        self.moved = False
+        self.animation = AnimationManager()
 
     def __str__(self):
         """
@@ -134,7 +104,7 @@ class Game(kq2grid.Grid, kq2gui.Game):
         for row in range(self.get_rows()):
             for col in range(self.get_cols()):
                 tile = self.get_tile(row, col)
-                ans += '%5d' % tile.get_val() if tile else '    .'
+                ans += (str(tile) if tile else '.').rjust(5)
             ans += '\n'
         return ans
 
@@ -144,15 +114,12 @@ class Game(kq2grid.Grid, kq2gui.Game):
         """
         kq2grid.Grid.reset(self)
 
-        self.score = 0
-        self.moving_tiles = set()
-        self.drawing_tiles = set()
-        self.holding_tiles = set()
-        self.merging_tiles = set()
+        self.num_tile = 0
+        self.moved = False
+        self.animation.reset()
 
         for _ in range(2):
             self.new_tile()
-        self.draw_holding_tiles()
 
     def new_tile(self):
         """
@@ -163,22 +130,39 @@ class Game(kq2grid.Grid, kq2gui.Game):
             row, col = random.choice(empty_cells)
             val = 2 if random.random() < .9 else 4
             tile = Tile(row, col, val)
-            tile.resize(TILE_SIZE, APPEAR_ANIMATION)
             self.set_tile(row, col, tile)
-            self.holding_tiles.add(tile)
-            self.score += 1
-            self.get_gui().update_score(self.score)
+            self.animation.new_tile(tile)
+            self.num_tile += 1
             print self
+
+    def get_score(self):
+        """
+        Return total number of tiles.
+        """
+        return self.num_tile
+
+    def get_line(self, init_cell, offset):
+        """
+        Return a line of cells.
+        """
+        ans = []
+        cell = init_cell
+        while self.is_valid(*cell):
+            ans.append(cell)
+            cell = kq2tile.add(cell, offset)
+        return ans
 
     def move(self, direction):
         """
         Move (merge) all tiles to one direction.
         """
-        moved = False
-        for line in self.iter_order[direction]:
-            if self.merge(line):
-                moved = True
-        if moved:
+        if self.animation.is_moving():
+            return
+        
+        self.moved = False
+        for init_cell in self.init_cells[direction]:
+            self.merge(self.get_line(init_cell, OFFSETS[direction]))
+        if self.moved:
             self.new_tile()
 
     def merge(self, cells):
@@ -186,7 +170,6 @@ class Game(kq2grid.Grid, kq2gui.Game):
         Merge one line of tiles, front to back.
         Main game logic.
         """
-        moved = False
         tiles = self.pop_tiles(cells)
         idx = 0
         for tile in tiles:
@@ -195,8 +178,9 @@ class Game(kq2grid.Grid, kq2gui.Game):
             if not prev_tile:
                 self.set_tile(row, col, tile)
             elif prev_tile == tile:
-                new_tile = self.merge_tiles(prev_tile, tile)
+                new_tile = prev_tile + tile
                 self.set_tile(row, col, new_tile)
+                self.animation.merge(prev_tile, tile, new_tile)
                 idx += 1
             else:
                 idx += 1
@@ -204,40 +188,79 @@ class Game(kq2grid.Grid, kq2gui.Game):
                 self.set_tile(row, col, tile)
 
             if (row, col) != tile.get_cell():
-                self.moving_tiles.add(tile)
-                tile.slide((row, col), SLIDE_ANIMATION)
+                self.animation.move_tile(row, col, tile)
                 tile.set_cell(row, col)
-                moved = True
-        return moved
+                self.moved = True
 
-    def merge_tiles(self, tile1, tile2):
+    def draw(self, canvas):
         """
-        Return a combined new tile.
+        Draw this game on canvas.
         """
-        new_tile = tile1 + tile2
-        new_tile.resize(TILE_SIZE, MERGE_ANIMATION)
-        self.merging_tiles.add(tile1)
-        self.merging_tiles.add(tile2)
-        self.holding_tiles.add(new_tile)
-        return new_tile
+        self.animation.draw(canvas, self.get_gui())
 
-    def draw_holding_tiles(self):
-        """
-        Draw hidden new tiles.
-        """
-        self.drawing_tiles.update(self.holding_tiles)
-        self.holding_tiles = set()
 
-    def remove_merging_tiles(self):
+class AnimationManager:
+    """
+    2048 game animation manager.
+    """
+    def __init__(self):
         """
-        Remove merged tiles from drawing.
+        Initialize all animation elements.
         """
-        self.drawing_tiles.difference_update(self.merging_tiles)
-        self.merging_tiles = set()
+        self.drawing_tiles = set()  # tiles that are drawing
+        self.moving_tiles = set()  # tiles that are moving
+        self.hiding_tiles = set()  # tiles that will be drawn after moving
+        self.merging_tiles = []  # tiles that will be removed after moving
 
+    def reset(self):
+        """
+        Reset all animation elements.
+        """
+        self.drawing_tiles = set()
+        self.moving_tiles = set()
+        self.hiding_tiles = set()
+        self.merging_tiles = []
+
+    def new_tile(self, tile, animation=APPEAR_ANIMATION):
+        """
+        Add animation to new tile.
+        """
+        size_ani = kq2animation.Resizing()
+        move_ani = kq2animation.Moving()
+        mix_ani = kq2animation.MixAnimation()
+        
+        # add the resizing animation when tile appears
+        size_ani.move_to(TILE_SIZE, animation)
+        
+        # set the move animation's initial position
+        move_ani.set_final_state(tile.get_center())
+        
+        mix_ani.add_animation(size_ani)
+        mix_ani.add_animation(move_ani)
+        tile.set_animation(mix_ani)
+        self.hiding_tiles.add(tile)
+
+    def move_tile(self, row, col, tile):
+        """
+        Add move animation to tile.
+        """
+        ani = tile.get_animation()
+        pos = kq2tile.cell_center(row, col, CELL_SIZE)
+        ani.move_to(pos, SLIDE_ANIMATION, kq2animation.Moving)
+        self.moving_tiles.add(tile)
+
+    def merge(self, tile1, tile2, merged_tile):
+        """
+        Add appear animation to the new merged tile. 
+        """
+        self.new_tile(merged_tile, MERGE_ANIMATION)
+        for tile in (tile1, tile2):
+            self.drawing_tiles.remove(tile)
+            self.merging_tiles.append(tile)
+        
     def is_moving(self):
         """
-        Return true is board is moving.
+        Return true if there is a moving tile
         """
         if self.moving_tiles:
             return True
@@ -245,22 +268,27 @@ class Game(kq2grid.Grid, kq2gui.Game):
 
     def update(self):
         """
-        Update moving, merging and holding tiles.
+        Update all animation elements.
         """
         for tile in set(self.moving_tiles):
-            if not tile.is_moving():
+            if not tile.get_animation().is_moving():
                 self.moving_tiles.remove(tile)
-            if not self.moving_tiles:
-                self.remove_merging_tiles()
-                self.draw_holding_tiles()
+        if not self.moving_tiles and self.hiding_tiles:
+            self.drawing_tiles.update(self.hiding_tiles)
+            self.hiding_tiles = set()
+            self.merging_tiles = []
 
-    def draw(self, canvas):
+    def draw(self, canvas, gui):
         """
-        Draw this game on canvas.
+        Draw animation.
         """
         self.update()
         for tile in self.drawing_tiles:
-            tile.draw(canvas, self.get_gui())
+            tile.draw(canvas, gui)
+            
+        # For any merging pair, draw second tile above first tile. 
+        for tile in self.merging_tiles:
+            tile.draw(canvas, gui)
 
 
 class GUI(kq2gui.GUI):
@@ -287,19 +315,12 @@ class GUI(kq2gui.GUI):
         """
         key-down handler
         """
-        if self.get_game().is_moving():
-            return
-
+        game = self.get_game()
         for key_name, direction in self.keys.items():
             if key == self.key_code(key_name):
-                self.get_game().move(direction)
+                game.move(direction)
+                self.label.set_text(str(game.get_score()))
                 break
-
-    def update_score(self, score):
-        """
-        Update score on GUI.
-        """
-        self.label.set_text(str(score))
 
 
 def run(gui):

@@ -62,39 +62,54 @@ class Animation:
         """
         Initialize a animation.
         """
-        self.moves = []
+        self.states = []
+        self.final_state = (0, 0)
 
-    def move_to(self, start, end, animation_template=None):
+    def get_final_state(self):
         """
-        Set animation move to given end.
+        Return final state.
         """
-        if animation_template:
-            self.moves += tup_slices(start, end, animation_template)
-        else:
-            self.moves = [end]
+        return self.final_state
 
-    def move_by(self, start, offset, animation_template=None):
+    def set_final_state(self, final_state):
         """
-        Set animation move by given offset.
+        Set final state.
         """
-        end = (start[0] + offset[0],
-               start[1] + offset[1])
-        self.move_to(start, end, animation_template)
+        self.final_state = final_state
+
+    def move_to(self, final_state, animation_template=None):
+        """
+        Add states to given final state.
+        """
+        if not animation_template:
+            animation_template = [1]
+            
+        self.states += tup_slices(self.final_state, final_state, 
+                                  animation_template)
+        self.final_state = final_state
+
+    def move_by(self, diff, animation_template=None):
+        """
+        Add states by given difference.
+        """
+        final_state = (self.final_state[0] + diff[0],
+                       self.final_state[1] + diff[1])
+        self.move_to(final_state, animation_template)
 
     def is_moving(self):
         """
         Return true if moving.
         """
-        if self.moves:
+        if self.states:
             return True
         return False
 
     def update(self, item):
         """
-        Remove and return the current update.
+        Remove and return the current state.
         """
-        if self.moves:
-            return self.moves.pop(0)
+        if self.states:
+            return self.states.pop(0)
 
 
 class Moving(Animation):
@@ -132,11 +147,12 @@ class Flipping(Animation):
         Initialize a flipping animation.
         """
         Animation.__init__(self)
+        self.set_final_state(angle)
 
         self.angle = angle
         self.front_color = front_color
         self.back_color = back_color
-        self.flip_rect_fn = x_flip_rect
+        self.flip_fn = x_flip_rect
 
     def set_front_color(self, color):
         """
@@ -150,32 +166,30 @@ class Flipping(Animation):
         """
         self.back_color = color
 
-    def flip_to(self, angle, animation_template=None, flip_rect_fn=None):
+    def set_flip_fn(self, flip_fn):
         """
-        Flip angle to given angle.
+        Set flip computation function.
         """
-        if flip_rect_fn:
-            self.flip_rect_fn = flip_rect_fn
+        self.flip_fn = flip_fn
 
-        if animation_template:
-            start = (self.angle, 0)
-            end = (angle, 0)
-            self.move_to(start, end, animation_template)
-        else:
-            self.angle = angle
+    def move_to(self, angle, animation_template=None):
+        """
+        Override to change angle to tuple
+        """
+        Animation.move_to(self, (angle, 0), animation_template)
 
-    def flip_by(self, angle, animation_template=None, flip_rect_fn=None):
+    def move_by(self, angle, animation_template=None):
         """
-        Flip angle by given angle.
+        Override to change angle to tuple
         """
-        angle = self.angle + angle
-        self.flip_to(angle, animation_template, flip_rect_fn)
+        Animation.move_by(self, (angle, 0), animation_template)
 
     def is_front(self):
         """
         Return true if front side is facing up.
         """
-        return 0 <= (self.angle + math.pi / 2) % (2 * math.pi) < math.pi
+        return (0 <= (self.angle + math.pi / 2) % (2 * math.pi)
+                < math.pi)
 
     def update_color(self, item):
         """
@@ -192,9 +206,9 @@ class Flipping(Animation):
         """
         Update item's rectangle.
         """
-        rect = self.flip_rect_fn(item.get_size(),
-                                 item.get_center(),
-                                 self.angle)
+        rect = self.flip_fn(item.get_size(),
+                            item.get_center(),
+                            self.angle)
         item.set_rect(rect)
 
     def update(self, item):
@@ -230,18 +244,64 @@ class MixAnimation(Animation):
         """
         return self.animations[ani_type]
 
-    def is_moving(self):
+    def remove_animation(self, ani_type):
+        """
+        Remove and return an animation by given type.
+        """
+        return self.animations.pop(ani_type)
+
+    def get_final_state(self, ani_type=None):
+        """
+        Return final state.
+        """
+        if ani_type:
+            ani = self.get_animation(ani_type)
+            return ani.get_final_state()
+
+    def set_final_state(self, final_state, ani_type=None):
+        """
+        Set final state.
+        """
+        if ani_type:
+            ani = self.get_animation(ani_type)
+            return ani.set_final_state(final_state)
+
+    def move_to(self, final_state, animation_template=None, ani_type=None):
+        """
+        Override to change given type of animation.
+        """
+        if ani_type:
+            ani = self.get_animation(ani_type)
+            ani.move_to(final_state, animation_template)
+
+    def move_by(self, final_state, animation_template=None, ani_type=None):
+        """
+        Override to change given type of animation.
+        """
+        if ani_type:
+            ani = self.get_animation(ani_type)
+            ani.move_by(final_state, animation_template)
+
+    def is_moving(self, ani_type=None):
         """
         Override to return true if any is moving.
         """
+        if ani_type:
+            ani = self.get_animation(ani_type)
+            return ani.is_moving()
+
         for ani in self.animations.values():
             if ani.is_moving():
                 return True
         return False
 
-    def update(self, item):
+    def update(self, item, ani_type=None):
         """
         Override to update all animations.
         """
-        for ani in self.animations.values():
+        if ani_type:
+            ani = self.get_animation(ani_type)
             ani.update(item)
+        else:
+            for ani in self.animations.values():
+                ani.update(item)

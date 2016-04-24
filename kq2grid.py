@@ -58,15 +58,15 @@ class Grid:
 
     def get_row(self, row):
         """
-        Return tiles in given row.
+        Return cells in given row.
         """
-        return [self.cells[row][col] for col in range(self.cols)]
+        return [(row, col) for col in range(self.cols)]
 
     def get_col(self, col):
         """
-        Returns tiles in given column.
+        Returns cells in given column.
         """
-        return [self.cells[row][col] for row in range(self.rows)]
+        return [(row, col) for row in range(self.rows)]
 
     def get_tile(self, row, col):
         """
